@@ -9,6 +9,21 @@ class UsersController < ApplicationController
   end
 
   def create
-  debugger
+   @user = User.create(user_params)
+   if @user.save
+    #バリデーション成功
+    flash[:success] = "Welcome to the Sample App"
+    redirect_to @user
+   else
+    #バリデーション失敗
+    render 'new', status: :unprocessable_entity
+   end
   end
+
+  private
+  def user_params
+    params.require(:user).permit(:name, :email, :password,
+                                 :password_confirmation)
+  end
+
 end
