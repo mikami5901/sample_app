@@ -1,12 +1,12 @@
 module SessionsHelper
 
-    def log_in(user)
+  def log_in(user)
         session[:user_id] = user.id
          # セッションリプレイ攻撃から保護する
     # 詳しくは https://techracho.bpsinc.jp/hachi8833/2023_06_02/130443 を参照
     session[:session_token] = user.session_token
 
-    end
+  end
       # 永続的セッションのためにユーザーをデータベースに記憶する
   def remember(user)
     user.remember
@@ -17,7 +17,10 @@ module SessionsHelper
      # 記憶トークンcookieに対応するユーザーを返す
   def current_user
     if (user_id = session[:user_id])
-      @current_user ||= User.find_by(id: user_id)
+      user = User.find_by(id: user_id)
+      if user && session[:session_token] == user.session_token
+        @current_user = user
+      end
     elsif (user_id = cookies.encrypted[:user_id])
       user = User.find_by(id: user_id)
       if user && user.authenticated?(cookies[:remember_token])
@@ -26,10 +29,14 @@ module SessionsHelper
       end
     end
   end
+   # 渡されたユーザーがカレントユーザーであればtrueを返す
+  def current_user?(user)
+    user && user == current_user
+  end
      # ユーザーがログインしていればtrue、その他ならfalseを返す
-    def logged_in?
+  def logged_in?
      !current_user.nil?
-    end
+  end
      # 永続的セッションを破棄する
   def forget(user)
     user.forget
@@ -38,9 +45,13 @@ module SessionsHelper
   end
 
      # 現在のユーザーをログアウトする
-    def log_out
+  def log_out
       forget(current_user)
      session.delete(:user_id)
      @current_user = nil
-    end
+  end
+  # アクセスしようとしたURLを保存する
+  def store_location
+    session[:forwarding_url] = request.original_url if request.get?
+  end
 end
